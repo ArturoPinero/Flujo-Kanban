@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Flujo Kanban</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="css/styles.css">
+<script src="js/estado.js" defer></script>
+<script src="js/app.js" defer></script>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="marca">
+      <span class="sello" aria-hidden="true">看板</span>
+      <div>
+        <h1>Flujo</h1>
+        <p>Visualiza el trabajo, limita lo que está en curso y termina antes de empezar.</p>
+      </div>
+    </div>
+    <div class="acciones">
+      <button class="btn" id="btnGuia" type="button">Cómo funciona Kanban</button>
+      <button class="btn" id="btnColumnas" type="button">Columnas y límites</button>
+      <button class="btn" id="btnCopia" type="button">Copia de seguridad</button>
+      <button class="btn primario" id="btnNueva" type="button">+ Nueva tarjeta</button>
+    </div>
+  </header>
+
+  <section class="metricas" aria-label="Métricas del flujo">
+    <div class="metrica"><b id="mCurso">0</b><span>Trabajo en curso</span></div>
+    <div class="metrica"><b id="mSemana">0</b><span>Terminadas en 7 días</span></div>
+    <div class="metrica"><b id="mLead">—</b><span>Lead time medio</span></div>
+    <div class="metrica"><b id="mCiclo">—</b><span>Cycle time medio</span></div>
+  </section>
+
+  <div class="filtros">
+    <input class="buscar" id="fBuscar" type="search" placeholder="Buscar por título, etiqueta o persona" aria-label="Buscar">
+    <select id="fPrio" aria-label="Filtrar por prioridad">
+      <option value="">Todas las prioridades</option>
+      <option value="alta">Alta</option>
+      <option value="media">Media</option>
+      <option value="baja">Baja</option>
+    </select>
+    <select id="fResp" aria-label="Filtrar por persona"></select>
+  </div>
+
+  <div class="aviso-ej" id="avisoEj" hidden>
+    <span>Estas tarjetas son ejemplos para que veas el tablero en marcha.</span>
+    <button class="btn" id="btnBorrarEj" type="button">Borrar ejemplos</button>
+  </div>
+
+  <div class="tablero-wrap">
+    <div class="tablero" id="tablero"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+<dialog id="dlgTarjeta">
+  <form class="dlg" id="formTarjeta" novalidate>
+    <h2 id="dlgTarjetaTit">Nueva tarjeta</h2>
+    <label class="campo">Título <input id="tTitulo" autocomplete="off"></label>
+    <label class="campo">Descripción <textarea id="tDesc"></textarea></label>
+    <div class="fila2">
+      <label class="campo">Prioridad
+        <select id="tPrio"><option value="alta">Alta</option><option value="media">Media</option><option value="baja">Baja</option></select>
+      </label>
+      <label class="campo">Columna <select id="tCol"></select></label>
+    </div>
+    <div class="fila2">
+      <label class="campo">Etiqueta <input id="tEtq" autocomplete="off" placeholder="Web, Finanzas…"></label>
+      <label class="campo">Responsable <input id="tResp" autocomplete="off"></label>
+    </div>
+    <label class="campo">Fecha límite <input id="tFecha" type="date"></label>
+    <p class="historial" id="historial" hidden></p>
+    <p class="error" id="tError" hidden></p>
+    <div class="pie-dlg" id="confirmBorrar" hidden>
+      <span>¿Eliminar esta tarjeta? No se puede deshacer.</span>
+      <div>
+        <button class="btn peligro" id="btnSiBorrar" type="button">Eliminar</button>
+        <button class="btn" id="btnNoBorrar" type="button">Cancelar</button>
+      </div>
+    </div>
+    <div class="pie-dlg">
+      <button class="btn" id="btnBorrar" type="button">Eliminar</button>
+      <div>
+        <button class="btn" type="button" data-cerrar>Cancelar</button>
+        <button class="btn primario" type="submit">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgColumnas">
+  <form class="dlg" id="formColumnas" novalidate>
+    <h2>Columnas y límites WIP</h2>
+    <p class="nota">El límite WIP es el máximo de tarjetas que caben en una columna. Pon 0 para no limitarla. La primera columna es la entrada y la última es «terminado».</p>
+    <div class="cols-cab"><span>Nombre</span><span>Límite</span><span></span></div>
+    <div class="cols-edit" id="colsEdit"></div>
+    <button class="add-col" id="btnAddCol" type="button">+ Añadir columna</button>
+    <p class="error" id="cError" hidden></p>
+    <div class="pie-dlg">
+      <span></span>
+      <div>
+        <button class="btn" type="button" data-cerrar>Cancelar</button>
+        <button class="btn primario" type="submit">Guardar</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgCopia">
+  <div class="dlg">
+    <h2>Copia de seguridad</h2>
+    <p class="nota">El tablero se guarda en este navegador. Copia el texto para guardarlo donde quieras, o pega una copia anterior y pulsa Restaurar.</p>
+    <textarea class="copia" id="copiaTxt" aria-label="Datos del tablero"></textarea>
+    <p class="nota" id="copiaMsg" role="status"></p>
+    <div class="pie-dlg">
+      <div>
+        <button class="btn" id="btnCopiar" type="button">Copiar</button>
+        <button class="btn" id="btnRestaurar" type="button">Restaurar</button>
+      </div>
+      <button class="btn" type="button" data-cerrar>Cerrar</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgGuia">
+  <div class="dlg guia">
+    <h2>Cómo funciona Kanban</h2>
+    <p>Kanban significa «tablero» o «tarjeta visible» en japonés. Nació en las fábricas de Toyota para producir solo lo que se necesita, cuando se necesita.</p>
+    <ol>
+      <li><b>Visualiza el trabajo.</b> Cada tarea es una tarjeta y cada columna es una fase.</li>
+      <li><b>Limita el trabajo en curso (WIP).</b> El número junto a cada columna indica cuántas tarjetas hay y cuántas caben. Si una columna está llena, el tablero no te deja meter más.</li>
+      <li><b>Tira del trabajo, no lo empujes.</b> Empieza algo nuevo solo cuando haya hueco en la siguiente columna.</li>
+      <li><b>Mide el flujo.</b> El <i>lead time</i> va desde que se crea la tarjeta hasta que se termina. El <i>cycle time</i> va desde que se empieza hasta que se termina.</li>
+      <li><b>Mejora poco a poco.</b> Si una columna se atasca siempre, ajusta su límite o revisa por qué.</li>
+    </ol>
+    <p class="nota">Mueve las tarjetas arrastrándolas o con las flechas ← →. Con una tarjeta seleccionada también puedes usar las flechas del teclado, y Enter para editarla.</p>
+    <div class="pie-dlg"><span></span><button class="btn primario" type="button" data-cerrar>Entendido</button></div>
+  </div>
+</dialog>
+</body>
+</html>
